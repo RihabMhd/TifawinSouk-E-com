@@ -12,7 +12,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $categories = Category::with('user')->get();
+        $categories = Category::with('user')->withCount('products')->latest()->get();
         return view('categories.index', compact('categories'));
     }
 
@@ -31,7 +31,7 @@ class CategoryController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         $validated['user_id'] = auth()->id();
@@ -47,7 +47,7 @@ class CategoryController extends Controller
      */
     public function show(string $id)
     {
-        $category = Category::with(['user', 'products'])->findOrFail($id);
+        $category = Category::with(['user', 'products.user'])->findOrFail($id);
 
         return view('categories.show', compact('category'));
     }
@@ -71,7 +71,7 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         $category->update($validated);
@@ -88,7 +88,8 @@ class CategoryController extends Controller
         $category = Category::findOrFail($id);
 
         if ($category->products()->count() > 0) {
-            return back()->with('error', 'Cannot delete category with products!');
+            return redirect()->route('categories.index')
+                ->with('error', 'Cannot delete category with existing products. Please delete or reassign the products first.');
         }
 
         $category->delete();
